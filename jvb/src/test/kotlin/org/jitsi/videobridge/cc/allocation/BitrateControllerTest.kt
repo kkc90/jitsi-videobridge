@@ -1351,6 +1351,8 @@ class BitrateControllerTest : ShouldSpec() {
 }
 
 class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val clock: FakeClock = FakeClock()) {
+    var endpointGwId: List<String> = mutableListOf("X")
+    var endpointGw: TestEndpoint = createEndpoints(*endpointGwId.toTypedArray()).get(0)
     var endpoints: List<MediaSourceContainer> = initialEndpoints
     val logger = createLogger()
 
@@ -1404,6 +1406,7 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
             }
         },
         Supplier { endpoints },
+        endpointGw,
         DiagnosticContext(),
         logger,
         true, // TODO merge BitrateControllerNewTest with old and use this flag

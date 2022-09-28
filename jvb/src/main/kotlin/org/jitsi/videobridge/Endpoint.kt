@@ -56,6 +56,7 @@ import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.videobridge.cc.BandwidthProbing
 import org.jitsi.videobridge.cc.allocation.BandwidthAllocation
 import org.jitsi.videobridge.cc.allocation.BitrateController
+import org.jitsi.videobridge.cc.allocation.RestCallRL
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.datachannel.DataChannelStack
 import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
@@ -231,6 +232,7 @@ class Endpoint @JvmOverloads constructor(
                 conference.requestKeyframe(endpointId, ssrc)
         },
         Supplier { getOrderedEndpoints() },
+        this,
         diagnosticContext,
         logger,
         isUsingSourceNames,
@@ -1154,6 +1156,13 @@ class Endpoint @JvmOverloads constructor(
         dtlsTransport.stop()
         iceTransport.stop()
         outgoingSrtpPacketQueue.close()
+
+        // clear request when close
+        val restCall = RestCallRL()
+        val url = "https://141.223.181.223:9005/clear/"
+        var test = restCall.sendSignal(url, this.id)
+        logger.info("##### TEST got out ##### : " + test)
+
 
         logger.info("Expired.")
     }

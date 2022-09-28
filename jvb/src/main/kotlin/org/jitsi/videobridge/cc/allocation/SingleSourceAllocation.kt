@@ -25,6 +25,7 @@ import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
+import org.json.simple.JSONObject
 import java.lang.Integer.max
 import java.time.Clock
 
@@ -46,10 +47,13 @@ internal class SingleSourceAllocation(
     clock: Clock,
     val logger: Logger = LoggerImpl(SingleSourceAllocation::class.qualifiedName)
 ) {
+        var timeNow = clock.instant().toEpochMilli()
     /**
      * The immutable list of layers to be considered when allocating bandwidth.
      */
-    val layers: Layers = selectLayers(mediaSource, onStage, constraints, clock.instant().toEpochMilli())
+    //val layers: Layers = selectLayers(mediaSource, onStage, constraints, clock.instant().toEpochMilli())
+    val layers: Layers = selectLayersForRL(endpoint, onStage, constraints, timeNow) //RL apply
+    val allLayers: List<LayerSnapshot> = allLayers(endpoint, timeNow)
 
     /**
      * The index (into [layers] of the current target layer). It can be improved in the `improve()` step, if there is
@@ -137,6 +141,19 @@ internal class SingleSourceAllocation(
             )
             targetIdx = layers.oversendIndex
         }
+
+        val resultingTargetBitrate = targetBitrate
+        return resultingTargetBitrate - initialTargetBitrate
+    }
+
+    fun rlApply(target: Int, remainingBps: Long, allowOversending: Boolean): Long {
+        val initialTargetBitrate = targetBitrate
+        val maxBps = remainingBps + initialTargetBitrate
+        if (layers.isEmpty()) {
+            return 0
+        }
+
+        targetIdx = target
 
         val resultingTargetBitrate = targetBitrate
         return resultingTargetBitrate - initialTargetBitrate
@@ -278,6 +295,68 @@ internal class SingleSourceAllocation(
             VideoType.DESKTOP, VideoType.DESKTOP_HIGH_FPS -> selectLayersForScreensharing(layers, constraints, onStage)
             else -> Layers.noLayers
         }
+    }
+
+    private fun selectLayersForRL(
+        /** The endpoint which is the source of the stream(s). */
+        endpoint: MediaSourceContainer,
+        onStage: Boolean,
+        /** The constraints that the receiver specified for [endpoint]. */
+        constraints: VideoConstraints,
+        nowMs: Long
+    ): Layers {
+        val source = endpoint.mediaSource
+        if (constraints.maxHeight <= 0 || source == null || !source.hasRtpLayers()) {
+            return Layers.noLayers
+        }
+        val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
+
+        return when (endpoint.videoType) {
+            VideoType.CAMERA -> selectLayersForCameraForRL(layers, constraints)
+            VideoType.NONE -> Layers.noLayers
+            VideoType.DESKTOP, VideoType.DESKTOP_HIGH_FPS -> selectLayersForScreensharing(layers, constraints, onStage)
+        }
+    }
+
+    private fun selectLayersForCameraForRL(
+            layers: List<LayerSnapshot>,
+            constraints: VideoConstraints,
+    ): Layers {
+
+        val minHeight = layers.map { it.layer.height }.minOrNull() ?: return Layers.noLayers
+        val noActiveLayers = layers.none { (_, bitrate) -> bitrate > 0 }
+    //    val (preferredHeight, preferredFps) = getPreferred(constraints)
+        val preferredHeight = 720
+        val preferredFps = 30
+
+        val ratesList: MutableList<LayerSnapshot> = ArrayList()
+        // Initialize the list of layers to be considered. These are the layers that satisfy the constraints, with
+        // a couple of exceptions (see comments below).
+        for (layerSnapshot in layers) {
+            // No active layers usually happens when the source has just been signaled and we haven't received
+            // any packets yet. Add the layers here, so one gets selected and we can start forwarding sooner.
+            if (noActiveLayers || layerSnapshot.bitrate > 0) {
+                ratesList.add(layerSnapshot)
+            }
+        }
+
+        val effectivePreferredHeight = max(preferredHeight, minHeight)
+        val preferredIndex = ratesList.lastIndexWhich { it.layer.height <= effectivePreferredHeight }
+    //    logger.info("##### preferredIndex :"+ preferredIndex)
+
+        return Layers(ratesList, preferredIndex, -1)
+    }
+
+
+    fun allLayers(endpoint: MediaSourceContainer,
+                nowMs: Long
+    ): List<LayerSnapshot> {
+        val source = endpoint.mediaSource
+        if (source == null || !source.hasRtpLayers()) {
+            return Layers.noLayers
+        }
+        val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
+        return layers
     }
 
     /**

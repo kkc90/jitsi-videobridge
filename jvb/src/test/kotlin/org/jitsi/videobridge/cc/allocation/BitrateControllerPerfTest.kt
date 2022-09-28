@@ -63,6 +63,8 @@ class BitrateControllerPerfTest : StringSpec() {
     private val logger = createLogger()
     private val clock = FakeClock()
     private val random = Random(93232)
+    private val endpointGwId = mutableListOf("X")
+    private val endpointGw: MutableList<TestEndpoint> = createEndpoints(*endpointGwId.toTypedArray())
 
     private val endpointIds = mutableListOf("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
     private val endpoints: MutableList<TestEndpoint> = createEndpoints(*endpointIds.toTypedArray())
@@ -79,6 +81,7 @@ class BitrateControllerPerfTest : StringSpec() {
             override fun allocationChanged(allocation: BandwidthAllocation) { }
         },
         Supplier { endpoints.toList() },
+        endpointGw.get(0),
         DiagnosticContext(),
         createLogger(),
         false, // TODO cover the case for true?

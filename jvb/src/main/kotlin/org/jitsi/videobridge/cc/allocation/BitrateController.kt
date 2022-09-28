@@ -47,6 +47,7 @@ import java.util.function.Supplier
 class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     eventHandler: EventHandler,
     endpointsSupplier: Supplier<List<T>>,
+    endpointGw: T,
     private val diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
     private val useSourceNames: Boolean,
@@ -91,6 +92,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         BandwidthAllocator(
             bitrateAllocatorEventHandler,
             endpointsSupplier,
+            endpointGw,
             Supplier { trustBwe },
             parentLogger,
             diagnosticContext,
