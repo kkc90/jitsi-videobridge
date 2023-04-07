@@ -42,6 +42,7 @@ import java.util.concurrent.*;
 import java.util.function.*;
 import java.util.stream.*;
 
+import org.jitsi.videobridge.cc.allocation.SingleSourceAllocation;
 import static org.jitsi.videobridge.cc.allocation.PrioritizeKt.prioritize;
 import static org.jitsi.videobridge.cc.allocation.VideoConstraintsKt.prettyPrint;
 
@@ -374,7 +375,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
          * */
         // Should implement the communication RL server. Send the collected data to RL server and receive back all targetIdx.
         for(SingleSourceAllocation ssa: sourceBitrateAllocations) {
-            String tmpId = ssa.getEndpoint().getId();
+            String tmpId = ssa.getEndpointId();
             int targetIdx = 5;
             try{
                 if(targetInfo != null) {
@@ -402,8 +403,8 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                     continue;
                 }
                 int target = -1;
-                if (mappingRL.containsKey(sourceBitrateAllocation.getEndpoint().getId())){
-                    target = mappingRL.get(sourceBitrateAllocation.getEndpoint().getId());
+                if (mappingRL.containsKey(sourceBitrateAllocation.getEndpointId())){
+                    target = mappingRL.get(sourceBitrateAllocation.getEndpointId());
                 }
 
                 // In stage view improve greedily until preferred, in tile view go step-by-step.
@@ -470,7 +471,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         long bwe = 0;
 
         TransceiverStats transceiverStats = itself.getTransceiver().getTransceiverStats();
-        IncomingStatisticsSnapshot incomingStats = transceiverStats.getIncomingStats();
+        IncomingStatisticsSnapshot incomingStats = transceiverStats.getRtpReceiverStats().getIncomingStats();
 
         for (IncomingSsrcStats.Snapshot ssrcStats : incomingStats.getSsrcStats().values())
         {
@@ -695,7 +696,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     public Map<String, Long> getTargetLayerBps() {
         Map<String, Long> result = new HashMap<>();
         for(SingleSourceAllocation ssa: SSAs) {
-            result.put(ssa.getEndpoint().getId(), ssa.getTargetBitrate());
+            result.put(ssa.getEndpointId(), ssa.getTargetBitrate());
         }
         return result;
     }
@@ -703,7 +704,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     public Map<String, List<LayerSnapshot>> getAllLayerBps() {
         Map<String, List<LayerSnapshot>> result= new HashMap<String, List<LayerSnapshot>>();
         for(SingleSourceAllocation ssa: SSAs) {
-            result.put(ssa.getEndpoint().getId(), ssa.getAllLayers());
+            result.put(ssa.getEndpointId(), ssa.getAllLayers());
         }
         return result;
     }

@@ -52,8 +52,8 @@ internal class SingleSourceAllocation(
      * The immutable list of layers to be considered when allocating bandwidth.
      */
     //val layers: Layers = selectLayers(mediaSource, onStage, constraints, clock.instant().toEpochMilli())
-    val layers: Layers = selectLayersForRL(endpoint, onStage, constraints, timeNow) //RL apply
-    val allLayers: List<LayerSnapshot> = allLayers(endpoint, timeNow)
+    val layers: Layers = selectLayersForRL(mediaSource, onStage, constraints, timeNow) //RL apply
+    val allLayers: List<LayerSnapshot> = allLayers(mediaSource, timeNow)
 
     /**
      * The index (into [layers] of the current target layer). It can be improved in the `improve()` step, if there is
@@ -299,22 +299,23 @@ internal class SingleSourceAllocation(
 
     private fun selectLayersForRL(
         /** The endpoint which is the source of the stream(s). */
-        endpoint: MediaSourceContainer,
+        mediaSource: MediaSourceDesc,
         onStage: Boolean,
         /** The constraints that the receiver specified for [endpoint]. */
         constraints: VideoConstraints,
         nowMs: Long
     ): Layers {
-        val source = endpoint.mediaSource
+        val source = mediaSource
         if (constraints.maxHeight <= 0 || source == null || !source.hasRtpLayers()) {
             return Layers.noLayers
         }
         val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
 
-        return when (endpoint.videoType) {
+        return when (source.videoType) {
             VideoType.CAMERA -> selectLayersForCameraForRL(layers, constraints)
             VideoType.NONE -> Layers.noLayers
             VideoType.DESKTOP, VideoType.DESKTOP_HIGH_FPS -> selectLayersForScreensharing(layers, constraints, onStage)
+            else -> throw AssertionError()
         }
     }
 
@@ -348,10 +349,10 @@ internal class SingleSourceAllocation(
     }
 
 
-    fun allLayers(endpoint: MediaSourceContainer,
+    fun allLayers(mediaSource: MediaSourceDesc,
                 nowMs: Long
     ): List<LayerSnapshot> {
-        val source = endpoint.mediaSource
+        val source = mediaSource
         if (source == null || !source.hasRtpLayers()) {
             return Layers.noLayers
         }
