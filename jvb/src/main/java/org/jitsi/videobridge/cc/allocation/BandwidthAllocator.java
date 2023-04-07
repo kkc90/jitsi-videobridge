@@ -391,39 +391,39 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         long oldRemainingBandwidth = -1;
 
         boolean oversending = false;
-        while (oldRemainingBandwidth != remainingBandwidth)
+//        while (oldRemainingBandwidth != remainingBandwidth)
+//        {
+//            oldRemainingBandwidth = remainingBandwidth;
+
+        for (int i = 0; i < sourceBitrateAllocations.size(); i++)
         {
-            oldRemainingBandwidth = remainingBandwidth;
-
-            for (int i = 0; i < sourceBitrateAllocations.size(); i++)
+            SingleSourceAllocation sourceBitrateAllocation = sourceBitrateAllocations.get(i);
+            if (sourceBitrateAllocation.getConstraints().isDisabled())
             {
-                SingleSourceAllocation sourceBitrateAllocation = sourceBitrateAllocations.get(i);
-                if (sourceBitrateAllocation.getConstraints().isDisabled())
-                {
-                    continue;
-                }
-                int target = -1;
-                if (mappingRL.containsKey(sourceBitrateAllocation.getEndpointId())){
-                    target = mappingRL.get(sourceBitrateAllocation.getEndpointId());
-                }
+                continue;
+            }
+            int target = -1;
+            if (mappingRL.containsKey(sourceBitrateAllocation.getEndpointId())){
+                target = mappingRL.get(sourceBitrateAllocation.getEndpointId());
+            }
 
-                // In stage view improve greedily until preferred, in tile view go step-by-step.
-                //remainingBandwidth -= sourceBitrateAllocation.improve(remainingBandwidth, i == 0);
-                remainingBandwidth -= sourceBitrateAllocation.rlApply(target,remainingBandwidth, i == 0);
-                if (remainingBandwidth < 0)
-                {
-                    oversending = true;
-                }
+            // In stage view improve greedily until preferred, in tile view go step-by-step.
+            //remainingBandwidth -= sourceBitrateAllocation.improve(remainingBandwidth, i == 0);
+            remainingBandwidth -= sourceBitrateAllocation.rlApply(target,remainingBandwidth, i == 0);
+            if (remainingBandwidth < 0)
+            {
+                oversending = true;
+            }
 
-                // In stage view, do not allocate bandwidth for thumbnails until the on-stage reaches "preferred".
-                // This prevents enabling thumbnail only to disable them when bwe slightly increases allowing on-stage
-                // to take more.
-                if (sourceBitrateAllocation.isOnStage() && !sourceBitrateAllocation.hasReachedPreferred())
-                {
-                    break;
-                }
+            // In stage view, do not allocate bandwidth for thumbnails until the on-stage reaches "preferred".
+            // This prevents enabling thumbnail only to disable them when bwe slightly increases allowing on-stage
+            // to take more.
+            if (sourceBitrateAllocation.isOnStage() && !sourceBitrateAllocation.hasReachedPreferred())
+            {
+                break;
             }
         }
+//        }
 
         // The sources which are in lastN, and are sending video, but were suspended due to bwe.
         List<String> suspendedIds = sourceBitrateAllocations.stream()
@@ -441,10 +441,14 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
         long targetBps = 0, idealBps = 0;
         for (SingleSourceAllocation sourceBitrateAllocation : sourceBitrateAllocations) {
+//            logger.info("##### SingleAllocation ##### : " + sourceBitrateAllocation.getResult());s
+            logger.info("##### selectLayers ##### : " + sourceBitrateAllocation.getLayers());
+            logger.info("##### allLayers ##### : " + sourceBitrateAllocation.getAllLayers());
             allocations.add(sourceBitrateAllocation.getResult());
             targetBps += sourceBitrateAllocation.getTargetBitrate();
             idealBps += sourceBitrateAllocation.getIdealBitrate();
         }
+        allocations.forEach(element -> logger.info(element));
         return new BandwidthAllocation(allocations, oversending, idealBps, targetBps, suspendedIds);
     }
 
@@ -578,7 +582,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
         result.put(endpointGwId, eps);
 
-        //logger.info("##### Check : " + result);
+        // logger.info("##### Check : " + result);
         return result;
     }
 

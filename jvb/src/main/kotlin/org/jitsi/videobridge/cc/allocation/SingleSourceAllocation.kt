@@ -152,7 +152,6 @@ internal class SingleSourceAllocation(
         if (layers.isEmpty()) {
             return 0
         }
-
         targetIdx = target
 
         val resultingTargetBitrate = targetBitrate
