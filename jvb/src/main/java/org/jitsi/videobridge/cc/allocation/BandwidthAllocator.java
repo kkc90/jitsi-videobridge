@@ -350,7 +350,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         JSONObject data = statInfoCollector();
         Map<String, Integer> mappingRL = new HashMap<String, Integer>();
 
-        String rlServer = "https://141.223.181.223:9005/predict"; //RL Server Request address
+        String rlServer = "https://141.223.181.211:9005/predict"; //RL Server Request address
         String rlTest = callRL(rlServer, data);
 
         JSONObject targetInfo = new JSONObject();
