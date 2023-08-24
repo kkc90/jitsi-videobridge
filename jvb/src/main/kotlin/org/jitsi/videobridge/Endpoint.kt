@@ -1159,7 +1159,7 @@ class Endpoint @JvmOverloads constructor(
 
         // clear request when close
         val restCall = RestCallRL()
-        val url = "https://141.223.181.223:9005/clear/"
+        val url = "https://141.223.181.211:9005/clear/"
         var test = restCall.sendSignal(url, this.id)
         logger.info("##### TEST got out ##### : " + test)
 
